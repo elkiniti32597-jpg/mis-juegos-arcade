@@ -1,0 +1,194 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+    <meta charset="UTF-8">
+    <title>Retro Snake Neon</title>
+    <style>
+        body { margin: 0; background: #080810; color: white; font-family: 'Courier New', monospace; display: flex; flex-direction: column; align-items: center; justify-content: center; min-height: 100vh; overflow: hidden; }
+        h1 { margin: 5px; font-size: 26px; text-shadow: 0 0 10px #ff007f; color: #ff007f; }
+        #canvasContainer { position: relative; border: 4px solid #333; box-shadow: 0 0 30px rgba(255, 0, 127, 0.2); }
+        canvas { background: #030307; display: block; }
+        #ui { position: absolute; top: 15px; left: 15px; right: 15px; display: flex; justify-content: space-between; font-size: 20px; font-weight: bold; pointer-events: none; text-shadow: 0 0 5px #00ffff; color: #00ffff; }
+        #pantalla { position: absolute; top: 0; left: 0; width: 100%; height: 100%; background: rgba(5, 5, 15, 0.9); display: flex; flex-direction: column; align-items: center; justify-content: center; }
+        .oculto { display: none !important; }
+        button { padding: 12px 35px; font-size: 18px; background: #ff007f; border: none; cursor: pointer; font-weight: bold; color: white; border-radius: 5px; box-shadow: 0 0 15px #ff007f; font-family: inherit; }
+        button:hover { background: #fff; color: #ff007f; box-shadow: 0 0 25px #fff; }
+        .controles { margin-top: 20px; font-size: 14px; color: #666; text-align: center; }
+    </style>
+</head>
+<body>
+
+    <h1>🐍 RETRO SNAKE NEON 🐍</h1>
+    
+    <div id="canvasContainer">
+        <canvas id="juegoCanvas" width="500" height="500"></canvas>
+        
+        <div id="ui">
+            <div id="scoreTxt">SCORE: 0</div>
+            <div id="recordTxt">RECORD: 0</div>
+        </div>
+
+        <div id="pantalla">
+            <h2 id="tituloPantalla" style="color: #00ffff; text-shadow: 0 0 10px #00ffff;">NEON ARCADES</h2>
+            <button id="btnAccion">¡INICIAR!</button>
+            <div class="controles">[Usa las Flechas del Teclado o WASD para Guiar]</div>
+        </div>
+    </div>
+
+    <script>
+        const canvas = document.getElementById("juegoCanvas");
+        const ctx = canvas.getContext("2d");
+        const pantalla = document.getElementById("pantalla");
+        const btnAccion = document.getElementById("btnAccion");
+        const scoreTxt = document.getElementById("scoreTxt");
+        const recordTxt = document.getElementById("recordTxt");
+        const tituloPantalla = document.getElementById("tituloPantalla");
+
+        const TAM_CUADRO = 20;
+        const COLUMNAS = canvas.width / TAM_CUADRO;
+        const FILAS = canvas.height / TAM_CUADRO;
+
+        let serpiente = [];
+        let comida = { x: 0, y: 0 };
+        let dx = TAM_CUADRO;
+        let dy = 0;
+        let cambiandoDireccion = false;
+        let score = 0;
+        let record = 0;
+        let juegoLoop;
+        let velocidad = 100;
+
+        window.addEventListener("keydown", cambiarDireccion);
+        btnAccion.addEventListener("click", iniciarJuego);
+
+        function iniciarJuego() {
+            serpiente = [
+                { x: TAM_CUADRO * 5, y: TAM_CUADRO * 10 },
+                { x: TAM_CUADRO * 4, y: TAM_CUADRO * 10 },
+                { x: TAM_CUADRO * 3, y: TAM_CUADRO * 10 }
+            ];
+            score = 0;
+            dx = TAM_CUADRO;
+            dy = 0;
+            velocidad = 100;
+            scoreTxt.innerText = `SCORE: ${score}`;
+            pantalla.classList.add("oculto");
+            crearComida();
+            clearInterval(juegoLoop);
+            juegoLoop = setInterval(bucle, velocidad);
+        }
+
+        function bucle() {
+            if (haTerminado()) {
+                finalizarJuego();
+                return;
+            }
+            cambiandoDireccion = false;
+            limpiarCanvas();
+            dibujarComida();
+            avanzarSerpiente();
+            dibujarSerpiente();
+        }
+
+        function limpiarCanvas() {
+            ctx.fillStyle = "#030307";
+            ctx.fillRect(0, 0, canvas.width, canvas.height);
+            
+            // Rejilla Neón sutil
+            ctx.strokeStyle = "rgba(255, 255, 255, 0.02)";
+            for (let i = 0; i < canvas.width; i += TAM_CUADRO) {
+                ctx.beginPath(); ctx.moveTo(i, 0); ctx.lineTo(i, canvas.height); ctx.stroke();
+                ctx.beginPath(); ctx.moveTo(0, i); ctx.lineTo(canvas.width, i); ctx.stroke();
+            }
+        }
+
+        function dibujarSerpiente() {
+            serpiente.forEach((parte, index) => {
+                // La cabeza es verde neón, el cuerpo cian neón
+                ctx.fillStyle = index === 0 ? "#00ff66" : "#00ffff";
+                ctx.shadowBlur = 10;
+                ctx.shadowColor = ctx.fillStyle;
+                ctx.fillRect(parte.x + 1, parte.y + 1, TAM_CUADRO - 2, TAM_CUADRO - 2);
+            });
+            ctx.shadowBlur = 0; // Resetear sombras
+        }
+
+        function avanzarSerpiente() {
+            const cabeza = { x: serpiente[0].x + dx, y: serpiente[0].y + dy };
+            serpiente.unshift(cabeza);
+
+            const haComido = serpiente[0].x === comida.x && serpiente[0].y === comida.y;
+            if (haComido) {
+                score += 10;
+                scoreTxt.innerText = `SCORE: ${score}`;
+                if (score > record) { record = score; recordTxt.innerText = `RECORD: ${record}`; }
+                crearComida();
+                // Aumentar velocidad gradualmente
+                velocidad = Math.max(50, velocidad - 3);
+                clearInterval(juegoLoop);
+                juegoLoop = setInterval(bucle, velocidad);
+            } else {
+                serpiente.pop();
+            }
+        }
+
+        function crearComida() {
+            comida.x = Math.floor(Math.random() * COLUMNAS) * TAM_CUADRO;
+            comida.y = Math.floor(Math.random() * FILAS) * TAM_CUADRO;
+            // Evitar que la comida aparezca encima de la serpiente
+            serpiente.forEach(parte => {
+                if (parte.x === comida.x && parte.y === comida.y) crearComida();
+            });
+        }
+
+        function dibujarComida() {
+            ctx.fillStyle = "#ff007f";
+            ctx.shadowBlur = 15;
+            ctx.shadowColor = "#ff007f";
+            ctx.beginPath();
+            ctx.arc(comida.x + TAM_CUADRO/2, comida.y + TAM_CUADRO/2, TAM_CUADRO/2 - 2, 0, Math.PI * 2);
+            ctx.fill();
+            ctx.shadowBlur = 0;
+        }
+
+        function cambiarDireccion(evento) {
+            if (cambiandoDireccion) return;
+            const tecla = evento.key.toLowerCase();
+            const yendoArriba = dy === -TAM_CUADRO;
+            const yendoAbajo = dy === TAM_CUADRO;
+            const yendoDerecha = dx === TAM_CUADRO;
+            const yendoIzquierda = dx === -TAM_CUADRO;
+
+            if ((tecla === "arrowleft" || tecla === "a") && !yendoDerecha) { dx = -TAM_CUADRO; dy = 0; cambiandoDireccion = true; }
+            if ((tecla === "arrowup" || tecla === "w") && !yendoAbajo) { dx = 0; dy = -TAM_CUADRO; cambiandoDireccion = true; }
+            if ((tecla === "arrowright" || tecla === "d") && !yendoIzquierda) { dx = TAM_CUADRO; dy = 0; cambiandoDireccion = true; }
+            if ((tecla === "arrowdown" || tecla === "s") && !yendoArriba) { dx = 0; dy = TAM_CUADRO; cambiandoDireccion = true; }
+        }
+
+        function haTerminado() {
+            // Chocar con paredes
+            const chocoIzquierda = serpiente[0].x < 0;
+            const chocoDerecha = serpiente[0].x >= canvas.width;
+            const chocoArriba = serpiente[0].y < 0;
+            const chocoAbajo = serpiente[0].y >= canvas.height;
+
+            if (chocoIzquierda || chocoDerecha || chocoArriba || chocoAbajo) return true;
+
+            // Chocar con uno mismo
+            for (let i = 4; i < serpiente.length; i++) {
+                if (serpiente[i].x === serpiente[0].x && serpiente[i].y === serpiente[0].y) return true;
+            }
+            return false;
+        }
+
+        function finalizarJuego() {
+            clearInterval(juegoLoop);
+            tituloPantalla.innerText = "GAME OVER";
+            tituloPantalla.style.color = "#ff007f";
+            tituloPantalla.style.textShadow = "0 0 10px #ff007f";
+            btnAccion.innerText = "REINTENTAR";
+            pantalla.classList.remove("oculto");
+        }
+    </script>
+</body>
+</html>

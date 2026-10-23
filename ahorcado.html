@@ -1,0 +1,135 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Juego del Ahorcado</title>
+    <style>
+        body { font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif; text-align: center; background-color: #f4f7f6; color: #333; margin: 0; padding: 20px; }
+        .container { max-width: 600px; margin: 30px auto; background: white; padding: 30px; border-radius: 12px; box-shadow: 0 4px 15px rgba(0,0,0,0.1); }
+        h1 { color: #2c3e50; margin-bottom: 10px; }
+        .palabra-contenedor { font-size: 32px; letter-spacing: 12px; margin: 30px 0; font-family: monospace; font-weight: bold; color: #2980b9; text-transform: uppercase; }
+        .vidas { font-size: 18px; margin-bottom: 20px; font-weight: 600; }
+        .vidas span { color: #e74c3c; font-size: 22px; }
+        .teclado { display: grid; grid-template-columns: repeat(auto-fit, minmax(40px, 1fr)); gap: 8px; max-width: 450px; margin: 0 auto; }
+        .tecla { padding: 12px 0; font-size: 16px; font-weight: bold; border: none; background-color: #ecf0f1; border-radius: 6px; cursor: pointer; transition: all 0.2s ease; color: #2c3e50; }
+        .tecla:hover:not(:disabled) { background-color: #3498db; color: white; transform: translateY(-2px); }
+        .tecla:disabled { background-color: #bdc3c7; color: #7f8c8d; cursor: not-allowed; }
+        #mensaje { font-size: 22px; font-weight: bold; margin: 20px 0; height: 30px; }
+        .btn-reiniciar { padding: 12px 25px; font-size: 16px; font-weight: bold; background-color: #2ecc71; color: white; border: none; border-radius: 6px; cursor: pointer; display: none; margin: 20px auto 0 auto; transition: background 0.2s; }
+        .btn-reiniciar:hover { background-color: #27ae60; }
+    </style>
+</head>
+<body>
+
+<div class="container">
+    <h1>El Juego del Ahorcado</h1>
+    <p>Adivina la palabra secreta antes de quedarte sin vidas.</p>
+    
+    <div class="vidas">Vidas restantes: <span id="contadorVidas">6</span> ❤️</div>
+    
+    <div class="palabra-contenedor" id="contenedorPalabra">_ _ _ _</div>
+    
+    <div class="teclado" id="tecladoContenedor"></div>
+    
+    <div id="mensaje"></div>
+    <button class="btn-reiniciar" id="btnReiniciar" onclick="iniciarJuego()">Jugar de nuevo</button>
+</div>
+
+<script>
+    const palabras = ["JAVASCRIPT", "COMPUTADORA", "PROGRAMA", "TECLADO", "PANTALLA", "INTERNET", "CODIGO", "CELULAR", "LOGICA", "WEB"];
+    let palabraSecreta = "";
+    let letrasAdivinadas = [];
+    let vidas = 6;
+
+    const contenedorPalabra = document.getElementById("contenedorPalabra");
+    const contadorVidas = document.getElementById("contadorVidas");
+    const tecladoContenedor = document.getElementById("tecladoContenedor");
+    const textoMensaje = document.getElementById("mensaje");
+    const btnReiniciar = document.getElementById("btnReiniciar");
+
+    const letrasAlfabeto = "ABCDEFGHIJKLMNÑOPQRSTUVWXYZ";
+
+    function iniciarJuego() {
+        // Elegir palabra al azar
+        palabraSecreta = palabras[Math.floor(Math.random() * palabras.length)];
+        letrasAdivinadas = [];
+        vidas = 6;
+        
+        textoMensaje.innerText = "";
+        textoMensaje.style.color = "#333";
+        contadorVidas.innerText = vidas;
+        btnReiniciar.style.display = "none";
+        
+        dibujarPalabra();
+        crearTeclado();
+    }
+
+    function dibujarPalabra() {
+        let textoMostrar = "";
+        for (let letra of palabraSecreta) {
+            if (letrasAdivinadas.includes(letra)) {
+                textoMostrar += letra + " ";
+            } else {
+                textoMostrar += "_ ";
+            }
+        }
+        contenedorPalabra.innerText = textoMostrar.trim();
+        
+        // Verificar si ganó
+        if (!textoMostrar.includes("_")) {
+            textoMensaje.innerText = "¡Felicidades! ¡Ganaste! 🎉";
+            textoMensaje.style.color = "#2ecc71";
+            finalizarJuego();
+        }
+    }
+
+    function crearTeclado() {
+        tecladoContenedor.innerHTML = "";
+        for (let letra of letrasAlfabeto) {
+            const boton = document.createElement("button");
+            boton.innerText = letra;
+            boton.classList.add("tecla");
+            boton.addEventListener("click", () => procesarIntento(letra, boton));
+            tecladoContenedor.appendChild(boton);
+        }
+    }
+
+    function procesarIntento(letra, boton) {
+        boton.disabled = true;
+        
+        if (palabraSecreta.includes(letra)) {
+            letrasAdivinadas.push(letra);
+            boton.style.backgroundColor = "#2ecc71";
+            boton.style.color = "white";
+            dibujarPalabra();
+        } else {
+            vidas--;
+            contadorVidas.innerText = vidas;
+            boton.style.backgroundColor = "#e74c3c";
+            boton.style.color = "white";
+            
+            if (vidas === 0) {
+                textoMensaje.innerText = `¡Perdiste! La palabra era: ${palabraSecreta} 😢`;
+                textoMensaje.style.color = "#e74c3c";
+                contenedorPalabra.innerText = palabraSecreta.split("").join(" ");
+                finalizarJuego();
+            }
+        }
+    }
+
+    function finalizarJuego() {
+        // Deshabilitar todos los botones del teclado
+        const botones = tecladoContenedor.getElementsByClassName("tecla");
+        for (let boton of botones) {
+            boton.disabled = true;
+        }
+        btnReiniciar.style.display = "block";
+    }
+
+    // Arrancar el juego al cargar la página
+    iniciarJuego();
+</script>
+
+</body>
+</html>

@@ -1,0 +1,108 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+    <meta charset="UTF-8">
+    <title>Super Arcade JS</title>
+    <style>
+        body { margin: 0; background: #050510; color: white; font-family: sans-serif; display: flex; flex-direction: column; align-items: center; justify-content: center; min-height: 100vh; overflow: hidden; }
+        h1 { font-size: 24px; text-shadow: 0 0 10px #00ffcc; }
+        #canvasContainer { position: relative; border: 4px solid #333; }
+        canvas { background: #000; display: block; }
+        #ui { position: absolute; top: 10px; left: 10px; right: 10px; display: flex; justify-content: space-between; font-size: 18px; font-weight: bold; pointer-events: none; }
+        #pantallaInicio, #pantallaFin { position: absolute; top: 0; left: 0; width: 100%; height: 100%; background: rgba(5, 5, 20, 0.85); display: flex; flex-direction: column; align-items: center; justify-content: center; }
+        .oculto { display: none !important; }
+        button { padding: 12px 30px; font-size: 18px; background: #00ffcc; border: none; cursor: pointer; font-weight: bold; border-radius: 5px; }
+        .instrucciones { margin-top: 20px; font-size: 14px; color: #888; text-align: center; }
+    </style>
+</head>
+<body>
+    <h1>🚀 SUPER ARCADE JAVASCRIPT 🚀</h1>
+    <div id="canvasContainer">
+        <canvas id="juegoCanvas" width="800" height="500"></canvas>
+        <div id="ui">
+            <div id="scoreTxt">PUNTOS: 0</div>
+            <div id="nivelTxt">NIVEL: 1</div>
+            <div id="vidasTxt">VIDAS: ❤️❤️❤️</div>
+        </div>
+        <div id="pantallaInicio">
+            <h2>AMENAZA ESPACIAL</h2>
+            <button id="btnIniciar">¡INICIAR LA ACCIÓN!</button>
+            <div class="instrucciones">
+                [Flechas Izquierda / Derecha] o [Teclas A / D] para Moverse<br>
+                [Barra Espaciadora] para DISPARAR PLASMA
+            </div>
+        </div>
+        <div id="pantallaFin" class="oculto">
+            <h2 style="color: #ff3366;">¡NAVE DESTRUIDA!</h2>
+            <h3 id="puntajeFinal">Puntuación: 0</h3>
+            <button id="btnReiniciar">JUGAR DE NUEVO</button>
+        </div>
+    </div>
+    <script>
+        const canvas = document.getElementById("juegoCanvas");
+        const ctx = canvas.getContext("2d");
+        const pantallaInicio = document.getElementById("pantallaInicio");
+        const pantallaFin = document.getElementById("pantallaFin");
+        const scoreTxt = document.getElementById("scoreTxt");
+        const nivelTxt = document.getElementById("nivelTxt");
+        const vidasTxt = document.getElementById("vidasTxt");
+        const puntajeFinal = document.getElementById("puntajeFinal");
+        let juegoActivo = false, score = 0, nivel = 1, vidas = 3, teclas = {};
+        let nave = { x: 400, y: 440, w: 40, h: 30, velocidad: 7 };
+        let disparos = [], enemigos = [], particulas = [], frecuenciaEnemigos = 1500, ultimoEnemigoTiempo = 0;
+        window.addEventListener("keydown", e => teclas[e.key] = true);
+        window.addEventListener("keyup", e => teclas[e.key] = false);
+        document.getElementById("btnIniciar").addEventListener("click", iniciarJuego);
+        document.getElementById("btnReiniciar").addEventListener("click", iniciarJuego);
+        function iniciarJuego() {
+            score = 0; nivel = 1; vidas = 3; disparos = []; enemigos = []; particulas = []; frecuenciaEnemigos = 1500;
+            nave.x = canvas.width / 2; juegoActivo = true;
+            pantallaInicio.classList.add("oculto"); pantallaFin.classList.add("oculto");
+            actualizarUI(); ultimoEnemigoTiempo = performance.now();
+            requestAnimationFrame(bucleJuego);
+        }
+        function crearParticulas(x, y, color) {
+            for (let i = 0; i < 15; i++) {
+                particulas.push({ x: x, y: y, vx: (Math.random() - 0.5) * 6, vy: (Math.random() - 0.5) * 6, radio: Math.random() * 3 + 1, vida: 1, color: color });
+            }
+        }
+        function bucleJuego(tiempoActual) {
+            if (!juegoActivo) return;
+            ctx.clearRect(0, 0, canvas.width, canvas.height);
+            if ((teclas["ArrowLeft"] || teclas["a"]) && nave.x > 0) nave.x -= nave.velocidad;
+            if ((teclas["ArrowRight"] || teclas["d"]) && nave.x < canvas.width - nave.w) nave.x += nave.velocidad;
+            if (teclas[" "] && (disparos.length === 0 || disparos[disparos.length - 1].y < nave.y - 120)) {
+                disparos.push({ x: nave.x + nave.w / 2 - 2, y: nave.y, w: 4, h: 15, v: 9 });
+                teclas[" "] = false;
+            }
+            if (tiempoActual - ultimoEnemigoTiempo > frecuenciaEnemigos) {
+                let tamaño = Math.random() * 30 + 20;
+                enemigos.push({ x: Math.random() * (canvas.width - tamaño), y: -tamaño, w: tamaño, h: tamaño, v: Math.random() * (2 + nivel * 0.5) + 1, color: `hsl(${Math.random() * 360}, 80%, 60%)` });
+                ultimoEnemigoTiempo = tiempoActual;
+            }
+            ctx.fillStyle = "#00ffcc";
+            disparos.forEach((d, i) => { d.y -= d.v; ctx.fillRect(d.x, d.y, d.w, d.h); if (d.y < 0) disparos.splice(i, 1); });
+            ctx.fillStyle = "#ffffff";
+            ctx.beginPath(); ctx.moveTo(nave.x + nave.w / 2, nave.y); ctx.lineTo(nave.x, nave.y + nave.h); ctx.lineTo(nave.x + nave.w, nave.y + nave.h); ctx.closePath(); ctx.fill();
+            enemigos.forEach((e, ei) => {
+                e.y += e.v; ctx.fillStyle = e.color; ctx.fillRect(e.x, e.y, e.w, e.h);
+                if (e.x < nave.x + nave.w && e.x + e.w > nave.x && e.y < nave.y + nave.h && e.y + e.h > nave.y) {
+                    crearParticulas(nave.x + nave.w/2, nave.y + nave.h/2, "#ff3366"); enemigos.splice(ei, 1); vidas--; actualizarUI(); if (vidas <= 0) finalizarJuego();
+                }
+                if (e.y > canvas.height) { enemigos.splice(ei, 1); vidas--; actualizarUI(); if (vidas <= 0) finalizarJuego(); }
+                disparos.forEach((d, di) => {
+                    if (d.x < e.x + e.w && d.x + d.w > e.x && d.y < e.y + e.h && d.y + d.h > d.y) {
+                        crearParticulas(e.x + e.w/2, e.y + e.h/2, e.color); enemigos.splice(ei, 1); disparos.splice(di, 1); score += 20;
+                        if (score % 100 === 0) { nivel++; frecuenciaEnemigos = Math.max(400, frecuenciaEnemigos - 200); }
+                        actualizarUI();
+                    }
+                });
+            });
+            particulas.forEach((p, pi) => { p.x += p.vx; p.y += p.vy; p.vida -= 0.02; ctx.fillStyle = p.color; ctx.globalAlpha = p.vida; ctx.beginPath(); ctx.arc(p.x, p.y, p.radio, 0, Math.PI * 2); ctx.fill(); ctx.globalAlpha = 1.0; if (p.vida <= 0) particulas.splice(pi, 1); });
+            requestAnimationFrame(bucleJuego);
+        }
+        function actualizarUI() { scoreTxt.innerText = `PUNTOS: ${score}`; nivelTxt.innerText = `NIVEL: ${nivel}`; vidasTxt.innerText = `VIDAS: ${"❤️".repeat(Math.max(0, vidas))}`; }
+        function finalizarJuego() { juegoActivo = false; puntajeFinal.innerText = `Puntuación Total: ${score} (Nivel ${nivel})`; pantallaFin.classList.remove("oculto"); }
+    </script>
+</body>
+</html>

@@ -1,0 +1,248 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>¡Clic Loco! El Desafío de los 67 Clics</title>
+    <style>
+        * { box-sizing: border-box; }
+        body { 
+            font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif; 
+            text-align: center; 
+            background: linear-gradient(135deg, #1e1e2f, #252542);
+            color: #fff;
+            margin: 0;
+            overflow: hidden;
+            height: 100vh;
+            display: flex;
+            flex-direction: column;
+            justify-content: flex-start;
+            align-items: center;
+            user-select: none;
+        }
+        .header {
+            margin-top: 20px;
+            z-index: 10;
+        }
+        h1 { margin: 5px 0; font-size: 2.5rem; color: #00ffcc; text-shadow: 0 0 10px rgba(0,255,204,0.3); }
+        .stats-container {
+            display: flex;
+            gap: 20px;
+            margin-top: 10px;
+            font-size: 1.2rem;
+            background: rgba(255, 255, 255, 0.1);
+            padding: 10px 20px;
+            border-radius: 50px;
+            backdrop-filter: blur(5px);
+            box-shadow: 0 4px 15px rgba(0,0,0,0.2);
+        }
+        .stat-box { font-weight: bold; }
+        #tiempo { color: #ff5555; }
+        #puntos { color: #ffff55; }
+        
+        /* Zona de juego */
+        .game-area {
+            position: relative;
+            width: 100vw;
+            flex-grow: 1;
+            margin-top: 20px;
+        }
+
+        /* Objetivo Loco */
+        #objetivo {
+            position: absolute;
+            width: 80px;
+            height: 80px;
+            border-radius: 50%;
+            background-color: #ff0055;
+            cursor: pointer;
+            display: none;
+            justify-content: center;
+            align-items: center;
+            font-weight: bold;
+            font-size: 1.2rem;
+            box-shadow: 0 0 20px rgba(255,0,85,0.6);
+            transition: transform 0.1s ease, width 0.2s ease, height 0.2s ease, background-color 0.2s ease;
+        }
+        #objetivo:active { transform: scale(0.9); }
+
+        /* Pantallas de Estado */
+        .overlay {
+            position: absolute;
+            top: 50%;
+            left: 50%;
+            transform: translate(-50%, -50%);
+            background: rgba(15, 15, 25, 0.95);
+            padding: 40px;
+            border-radius: 20px;
+            border: 2px solid #00ffcc;
+            box-shadow: 0 0 30px rgba(0,255,204,0.4);
+            z-index: 20;
+            max-width: 400px;
+            width: 90%;
+        }
+        .btn-principal {
+            background: #00ffcc;
+            color: #1e1e2f;
+            border: none;
+            padding: 15px 30px;
+            font-size: 1.3rem;
+            font-weight: bold;
+            border-radius: 50px;
+            cursor: pointer;
+            margin-top: 20px;
+            box-shadow: 0 5px 15px rgba(0,255,204,0.4);
+            transition: all 0.2s ease;
+        }
+        .btn-principal:hover {
+            background: #fff;
+            box-shadow: 0 5px 25px rgba(255,255,255,0.6);
+            transform: translateY(-2px);
+        }
+        .medal {
+            font-size: 4rem;
+            margin: 15px 0;
+            display: block;
+            animation: bounce 1s infinite alternate;
+        }
+        @keyframes bounce {
+            from { transform: translateY(0); }
+            to { transform: translateY(-10px); }
+        }
+    </style>
+</head>
+<body>
+
+    <div class="header">
+        <h1>🎯 ¡CLIC LOCO! ⚡</h1>
+        <div class="stats-container">
+            <div class="stat-box">Tiempo: <span id="tiempo">67s</span></div>
+            <div class="stat-box">Clicks: <span id="puntos">0</span></div>
+        </div>
+    </div>
+
+    <div class="game-area" id="gameArea">
+        <!-- El botón loco aparecerá aquí -->
+        <div id="objetivo">💥</div>
+
+        <!-- Pantalla de Inicio -->
+        <div id="pantallaInicio" class="overlay">
+            <h2>El Desafío de los 67 Segundos</h2>
+            <p>Un botón mutante aparecerá aleatoriamente. Cambiará de tamaño, posición y color cada vez que lo golpees.</p>
+            <p><strong>¿Tu meta?</strong> Hacer todos los clics que puedas antes de que se acabe el tiempo.</p>
+            <button class="btn-principal" onclick="iniciarJuego()">¡INICIAR CAOS!</button>
+        </div>
+
+        <!-- Pantalla de Resultados -->
+        <div id="pantallaFin" class="overlay" style="display: none;">
+            <h2>⏱️ ¡Tiempo Agotado!</h2>
+            <p>Lograste un total de:</p>
+            <h1 id="resultadoFinal" style="font-size: 3.5rem; color: #ffff55;">0</h1>
+            <p>Clics totales</p>
+            <span id="medallaIcono" class="medal">🥉</span>
+            <h3 id="rangoTexto">¡Principiante del Mouse!</h3>
+            <button class="btn-principal" onclick="iniciarJuego()">¿OTRA RONDA?</button>
+        </div>
+    </div>
+
+    <script>
+        let puntuacion = 0;
+        let tiempoRestante = 67;
+        let intervaloTiempo;
+        const juegoActivo = false;
+
+        const objetivo = document.getElementById("objetivo");
+        const gameArea = document.getElementById("gameArea");
+        const pantallaInicio = document.getElementById("pantallaInicio");
+        const pantallaFin = document.getElementById("pantallaFin");
+        const textoTiempo = document.getElementById("tiempo");
+        const textoPuntos = document.getElementById("puntos");
+        const textoResultado = document.getElementById("resultadoFinal");
+        const medallaIcono = document.getElementById("medallaIcono");
+        const rangoTexto = document.getElementById("rangoTexto");
+
+        const colores = ["#ff0055", "#00ffcc", "#ffaa00", "#9900ff", "#00ff00", "#ff00ff", "#ffff00"];
+        const emojis = ["💥", "🎯", "⚡", "👽", "👾", "🔥", "🚀"];
+
+        function iniciarJuego() {
+            puntuacion = 0;
+            tiempoRestante = 67;
+            textoPuntos.innerText = puntuacion;
+            textoTiempo.innerText = tiempoRestante + "s";
+            
+            pantallaInicio.style.display = "none";
+            pantallaFin.style.display = "none";
+            objetivo.style.display = "flex";
+
+            moverObjetivo();
+
+            clearInterval(intervaloTiempo);
+            intervaloTiempo = setInterval(() => {
+                tiempoRestante--;
+                textoTiempo.innerText = tiempoRestante + "s";
+
+                if (tiempoRestante <= 0) {
+                    finalizarJuego();
+                }
+            }, 1000);
+        }
+
+        function moverObjetivo() {
+            // Calcular límites del área utilizable de la pantalla
+            const anchoMax = gameArea.clientWidth - objetivo.clientWidth - 40;
+            const altoMax = gameArea.clientHeight - objetivo.clientHeight - 40;
+
+            // Asegurar posiciones válidas positivas
+            const posX = Math.max(20, Math.floor(Math.random() * anchoMax));
+            const posY = Math.max(20, Math.floor(Math.random() * altoMax));
+
+            // Cambiar tamaño aleatorio entre 50px y 110px
+            const nuevoTamano = Math.floor(Math.random() * 60) + 50;
+
+            // Cambiar color y emoji al azar
+            const colorAzar = colores[Math.floor(Math.random() * colores.length)];
+            const emojiAzar = emojis[Math.floor(Math.random() * emojis.length)];
+
+            // Aplicar estilos
+            objetivo.style.left = posX + "px";
+            objetivo.style.top = posY + "px";
+            objetivo.style.width = nuevoTamano + "px";
+            objetivo.style.height = nuevoTamano + "px";
+            objetivo.style.backgroundColor = colorAzar;
+            objetivo.style.boxShadow = `0 0 20px ${colorAzar}`;
+            objetivo.innerText = emojiAzar;
+        }
+
+        objetivo.addEventListener("click", () => {
+            puntuacion++;
+            textoPuntos.innerText = puntuacion;
+            moverObjetivo();
+        });
+
+        function finalizarJuego() {
+            clearInterval(intervaloTiempo);
+            objetivo.style.display = "none";
+            pantallaFin.style.display = "block";
+            textoResultado.innerText = puntuacion;
+
+            // Asignar rangos divertidos basados en clics en 67 segundos
+            if (puntuacion < 40) {
+                medallaIcono.innerText = "🐢";
+                rangoTexto.innerText = "¡Velocidad Tortuga Maravilla!";
+            } else if (puntuacion < 80) {
+                medallaIcono.innerText = "🥉";
+                rangoTexto.innerText = "¡Destructor de Mouse Bronce!";
+            } else if (puntuacion < 130) {
+                medallaIcono.innerText = "🥈";
+                rangoTexto.innerText = "¡Ninja del Clic de Plata!";
+            } else if (puntuacion < 180) {
+                medallaIcono.innerText = "🥇";
+                rangoTexto.innerText = "¡Velocidad de la Luz Oro!";
+            } else {
+                medallaIcono.innerText = "🏆";
+                rangoTexto.innerText = "¡DIOS DEL CLIC INSANO! 🔥";
+            }
+        }
+    </script>
+</body>
+</html>

@@ -1,0 +1,97 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Juego: Adivina el Número</title>
+    <style>
+        body { font-family: Arial, sans-serif; text-align: center; margin-top: 50px; background-color: #f4f4f9; color: #333; }
+        .container { max-width: 400px; margin: 0 auto; background: white; padding: 30px; border-radius: 10px; box-shadow: 0 4px 8px rgba(0,0,0,0.1); }
+        input { padding: 10px; width: 80px; text-align: center; font-size: 18px; border: 2px solid #ccc; border-radius: 5px; margin-right: 10px; }
+        button { padding: 10px 20px; font-size: 16px; cursor: pointer; background-color: #007BFF; color: white; border: none; border-radius: 5px; font-weight: bold; }
+        button:hover { background-color: #0056b3; }
+        #mensaje { font-weight: bold; margin-top: 20px; font-size: 18px; min-height: 27px; }
+        #intentosRestantes { font-size: 16px; color: #666; margin-top: 15px; }
+        #btnReiniciar { background-color: #28a745; margin-top: 15px; display: none; }
+        #btnReiniciar:hover { background-color: #218838; }
+    </style>
+</head>
+<body>
+
+<div class="container">
+    <h1>¡Adivina el Número!</h1>
+    <p>He pensado un número entre 1 y 100.<br>Tienes 5 intentos para adivinarlo.</p>
+
+    <div style="margin-top: 20px;">
+        <input type="number" id="entradaNumero" min="1" max="100" placeholder="0">
+        <button id="botonProbar">Probar</button>
+    </div>
+
+    <p id="intentosRestantes">Intentos restantes: 5</p>
+    <div id="mensaje"></div>
+    <button id="btnReiniciar">Jugar de nuevo</button>
+</div>
+
+<script>
+    // Todo en un solo archivo para evitar problemas de rutas locales
+    let numeroSecreto = Math.floor(Math.random() * 100) + 1;
+    let intentos = 5;
+
+    const entradaNumero = document.getElementById("entradaNumero");
+    const botonProbar = document.getElementById("botonProbar");
+    const textoIntentos = document.getElementById("intentosRestantes");
+    const textoMensaje = document.getElementById("mensaje");
+    const btnReiniciar = document.getElementById("btnReiniciar");
+
+    botonProbar.addEventListener("click", function() {
+        const suposicionUsuario = parseInt(entradaNumero.value);
+
+        if (isNaN(suposicionUsuario) || suposicionUsuario < 1 || suposicionUsuario > 100) {
+            textoMensaje.innerText = "Por favor, introduce un número válido entre 1 y 100. ⚠️";
+            textoMensaje.style.color = "orange";
+            return;
+        }
+
+        intentos--;
+        textoIntentos.innerText = `Intentos restantes: ${intentos}`;
+
+        if (suposicionUsuario === numeroSecreto) {
+            textoMensaje.innerText = `¡Felicidades! 🎉 ¡Adivinaste el número (${numeroSecreto})!`;
+            textoMensaje.style.color = "green";
+            terminarJuego();
+        } else if (intentos === 0) {
+            textoMensaje.innerText = `¡Perdiste! 😢 El número era el ${numeroSecreto}.`;
+            textoMensaje.style.color = "red";
+            terminarJuego();
+        } else if (suposicionUsuario < numeroSecreto) {
+            textoMensaje.innerText = "El número secreto es MAYOR. ↑";
+            textoMensaje.style.color = "blue";
+        } else if (suposicionUsuario > numeroSecreto) {
+            textoMensaje.innerText = "El número secreto es MENOR. ↓";
+            textoMensaje.style.color = "blue";
+        }
+
+        entradaNumero.value = "";
+        entradaNumero.focus();
+    });
+
+    function terminarJuego() {
+        entradaNumero.disabled = true;
+        botonProbar.disabled = true;
+        btnReiniciar.style.display = "inline-block";
+    }
+
+    btnReiniciar.addEventListener("click", function() {
+        numeroSecreto = Math.floor(Math.random() * 100) + 1;
+        intentos = 5;
+        entradaNumero.disabled = false;
+        botonProbar.disabled = false;
+        entradaNumero.value = "";
+        textoIntentos.innerText = "Intentos restantes: 5";
+        textoMensaje.innerText = "";
+        btnReiniciar.style.display = "none";
+        entradaNumero.focus();
+    });
+</script>
+</body>
+</html>
